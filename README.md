@@ -7,7 +7,7 @@ This is a wrapper over standard `sync.Pool` which solves few problems:
 - debug tools
   - `GetObjectsInUse()`
   - tracking of code points where an object was borrowed but not returned back to the pool (in debug mode only)
-  - easy to switch off pooling. Just rename `NewPool()` to `NewPoolStub()` and instances will be created new always on `Get()` and nothing will happen on `Put()`
+  - easy to switch off pooling for debug purposes: just use `NewPoolStub()` instead of `NewPool()` and the pool will not actually be used
 
 # Install
 `go get https://github.com/host6/pool`
