@@ -15,7 +15,7 @@ type myStruct struct {
 	// this field will initialized in the instantiator
 	IReleaser
 
-	// exmaple nested field that requires personal handling (e.g. borrow\release)
+	// example nested field that requires personal handling (e.g. borrow\release)
 	bb   *bytebufferpool.ByteBuffer
 	fld1 int
 }
@@ -38,6 +38,7 @@ func TestBasicUsage_Simple(t *testing.T) {
 		return &myStruct{IReleaser: releaser}
 	})
 
+	// borrow an instance of *myStruct
 	myStructInstance := p.Get()
 
 	// internal initialization is done in myStruct.Init()
@@ -48,7 +49,7 @@ func TestBasicUsage_Simple(t *testing.T) {
 
 	// return the instance back to the pool
 	myStructInstance.Release()
-	// myStruct.bb is returned back to `bytebufferpool` by myStruct.Cleanup()
+	// myStruct.bb is automatically returned back to `bytebufferpool` by myStruct.Cleanup()
 	// myStructInstance is returned to the pool
 	// myStructInstance as well as its any member must not be used (even touched) from now on
 
@@ -67,6 +68,7 @@ func TestObjectsUsageTrackInDebugMode(t *testing.T) {
 		return &myStruct{IReleaser: releaser}
 	})
 
+	// borrow 10 instances
 	roots := []*myStruct{}
 	for i := 0; i < 10; i++ {
 		roots = append(roots, p.Get())
@@ -106,11 +108,11 @@ func TestStub(t *testing.T) {
 		}
 	})
 
-	// borrow pooled struct, initialize fields
+	// borrow a struct, initialize fields
 	owner := poolOwner.Get()
 	require.Equal(uint64(3), GetObjectsInUse())
 
-	// owned struct can not be accidentally released
+	// owned struct can not be accidentally released before owner
 	require.Panics(func() { owner.nested.Release() })
 
 	// owner will release its internal fields and an owned struct using its special releaser
