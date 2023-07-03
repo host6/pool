@@ -69,15 +69,6 @@ func (p *implPool[T]) GetOwned(owner IReleaser) T {
 	releaseable.setOwnedTail(owner.getOwnedTail())
 	owner.setOwnedTail(releaseable)
 	releaseable.init(obj)
-	if isDebug {
-		st := getStackTrace().string()
-		releaseable.setBorrowStackTrace(st)
-		m.Lock()
-		count := objAmounts[st]
-		count++
-		objAmounts[st] = count
-		m.Unlock()
-	}
 	return obj.(T)
 }
 

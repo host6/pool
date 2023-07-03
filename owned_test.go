@@ -71,6 +71,11 @@ func TestBasicUsage_Owned(t *testing.T) {
 	// its lifetime is not under developer's control
 	// it will be released automatically on owner.Release() to prevent the released owner.nested usage
 	require.Panics(func() { owner.nested.Release() })
+	require.Panics(func() { owner.nested.internal.Release() })
+
+	require.False(owner.IsOwned())
+	require.True(owner.nested.IsOwned())
+	require.True(owner.nested.internal.IsOwned())
 
 	owner.Release()
 	// owner is released, nested is released automatically as well
