@@ -1,6 +1,6 @@
 # Pool
 This is a wrapper over standard `sync.Pool` which solves few problems:
-- automatically provides `Release()` logic with the folowing features:
+- automatically provides `Release()` logic with the following features:
   - protect against retuning the object back to the pool twice accidentally
   - automatic cleanup before release if `Cleanup()` struct func is defined
 - automatic init after borrow if `Init()` struct funcs is defined
@@ -8,7 +8,7 @@ This is a wrapper over standard `sync.Pool` which solves few problems:
 - debug tools
   - `GetObjectsInUse()`. Very useful to have ```require.Zero(t, pool.GetObjectsInUse())``` at the end of each test
   - tracking of code points where an object was borrowed but not returned back to the pool (in debug mode only). Call `pool.PrintNonReleased(os.Stdout)` at the end of your test to catch leaks
-  - easy to switch off pooling for debug purposes: just use `NewPoolStub()` instead of `NewPool()` and the pool will not actually be used
+  - easy to switch off pooling for debug purposes: just use `NewPoolStub()` instead of `NewPool()` and the pool will not actually be used, i.e. new entity will be created on each `IPool.Get()`
 
 # Install
 `go get https://github.com/host6/pool`
