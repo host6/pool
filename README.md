@@ -14,4 +14,4 @@ This is a wrapper over standard `sync.Pool` which solves few problems:
 `go get https://github.com/host6/pool`
 
 # Usage
-- see [basic usage test](https://github.com/host6/pool/blob/main/impl_test.go#L34)
+- see [basic usage test](https://github.com/host6/pool/blob/main/impl_test.go#L41)
