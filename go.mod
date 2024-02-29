@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/stretchr/testify v1.8.4
 	github.com/valyala/bytebufferpool v1.0.0
-	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df
+	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225
 )
 
 require (
