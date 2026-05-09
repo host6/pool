@@ -28,11 +28,12 @@ type IReleaser interface {
 	IsOwned() bool
 
 	// for internal use
-	releaseOwned()
+	releaseSelf() IReleaser
 	reset()
 	setIsOwned()
 	setBorrowStackTrace(stackTrace string)
-	init(obj interface{})
-	setOwnedTail(interface{})
-	getOwnedTail() interface{}
+	init()
+	setNext(IReleaser)
+	getNext() IReleaser
+	isAlreadyReleased() bool
 }

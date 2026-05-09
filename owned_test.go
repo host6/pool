@@ -91,6 +91,16 @@ func TestBasicUsage_Owned(t *testing.T) {
 	require.Equal(uint64(0), GetObjectsInUse())
 }
 
+func TestGetOwned_PanicsOnReleasedOwner(t *testing.T) {
+	require := require.New(t)
+
+	o := poolOwner.Get()
+	o.Release()
+
+	require.PanicsWithValue("owner is already released", func() { poolNested.GetOwned(o) })
+	require.Zero(GetObjectsInUse())
+}
+
 func BenchmarkOwned(b *testing.B) {
 	b.Run("basic", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {

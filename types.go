@@ -17,15 +17,14 @@ type implPool[T any] struct {
 }
 
 type implIReleaser[T any] struct {
-	obj                  T
-	isReleased           bool
-	ownerPool            *implPool[T]
-	isOwned              bool
-	cleanupIntf          interface{ Cleanup() }
-	borrowStackTrace     string
-	initIntf             interface{ Init() }
-	isInitIntfDetermined bool
-	ownedTail            interface{}
+	obj              T
+	isReleased       bool
+	ownerPool        *implPool[T]
+	isOwned          bool
+	cleanupIntf      interface{ Cleanup() }
+	borrowStackTrace string
+	initIntf         interface{ Init() }
+	next             IReleaser
 }
 
 type stackFrame struct {

@@ -8,7 +8,9 @@
 package pool
 
 import (
+	"bytes"
 	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -68,38 +70,60 @@ func TestBasicUsage_Simple(t *testing.T) {
 }
 
 func TestObjectsUsageTrackInDebugMode(t *testing.T) {
-	require := require.New(t)
 	SetDebug(true)
 	defer SetDebug(false)
-	p := NewPool[*myStruct](func(releaser IReleaser) any {
-		return &myStruct{IReleaser: releaser}
+
+	t.Run("Get", func(t *testing.T) {
+		require := require.New(t)
+		p := NewPool[*myStruct](func(releaser IReleaser) any {
+			return &myStruct{IReleaser: releaser}
+		})
+
+		// borrow 10 instances
+		roots := []*myStruct{}
+		for i := 0; i < 10; i++ {
+			roots = append(roots, p.Get())
+		}
+
+		// one more as an example
+		roots = append(roots, p.Get())
+
+		// release one as an example
+		roots[5].Release()
+
+		// prints code points where objects were borrowed but not released
+		PrintNonReleased(os.Stdout)
+
+		for i, root := range roots {
+			if i != 5 {
+				root.Release()
+			}
+		}
+
+		// prints nothing
+		PrintNonReleased(os.Stdout)
+
+		require.Zero(GetObjectsInUse())
 	})
 
-	// borrow 10 instances
-	roots := []*myStruct{}
-	for i := 0; i < 10; i++ {
-		roots = append(roots, p.Get())
-	}
+	t.Run("GetOwned", func(t *testing.T) {
+		require := require.New(t)
 
-	// one more as an example
-	roots = append(roots, p.Get())
+		o := poolOwner.Get()
+		require.Equal(uint64(3), GetObjectsInUse())
 
-	// release one as an example
-	roots[5].Release()
+		var buf bytes.Buffer
+		PrintNonReleased(&buf)
+		require.Equal(3, strings.Count(buf.String(), "not released borrowed at:"))
 
-	// prints code points where objects were borrowed but not released
-	PrintNonReleased(os.Stdout)
+		o.Release()
 
-	for i, root := range roots {
-		if i != 5 {
-			root.Release()
-		}
-	}
+		buf.Reset()
+		PrintNonReleased(&buf)
+		require.Empty(buf.String())
 
-	// prints nothing
-	PrintNonReleased(os.Stdout)
-
-	require.Zero(GetObjectsInUse())
+		require.Zero(GetObjectsInUse())
+	})
 }
 
 func TestStub(t *testing.T) {

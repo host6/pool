@@ -15,7 +15,6 @@ import (
 	"sync/atomic"
 )
 
-
 var (
 	m               sync.Mutex = sync.Mutex{}
 	objectsCounters []func() uint64
@@ -35,17 +34,15 @@ func (p *implPool[T]) Get() T {
 	obj := p.get()
 	releaseable := obj.(IReleaser)
 	releaseable.reset()
-	releaseable.init(obj)
 	atomic.AddUint64(&p.objectsInUse, 1)
 	if isDebug {
 		st := getStackTrace().string()
 		releaseable.setBorrowStackTrace(st)
 		m.Lock()
-		count := objAmounts[st]
-		count++
-		objAmounts[st] = count
+		objAmounts[st]++
 		m.Unlock()
 	}
+	releaseable.init()
 	return obj.(T)
 }
 
@@ -57,6 +54,7 @@ func (p *implPool[T]) get() any {
 		}
 		obj = p.instantiator(releaser)
 		releaser.cleanupIntf, _ = obj.(interface{ Cleanup() })
+		releaser.initIntf, _ = obj.(interface{ Init() })
 		releaser.obj = obj.(T)
 	} else {
 		obj = p.Pool.Get()
@@ -65,14 +63,24 @@ func (p *implPool[T]) get() any {
 }
 
 func (p *implPool[T]) GetOwned(owner IReleaser) T {
+	if owner.isAlreadyReleased() {
+		panic("owner is already released")
+	}
 	obj := p.get()
 	atomic.AddUint64(&p.objectsInUse, 1)
 	releaseable := obj.(IReleaser)
 	releaseable.reset()
 	releaseable.setIsOwned()
-	releaseable.setOwnedTail(owner.getOwnedTail())
-	owner.setOwnedTail(releaseable)
-	releaseable.init(obj)
+	releaseable.setNext(owner.getNext())
+	owner.setNext(releaseable)
+	if isDebug {
+		st := getStackTrace().string()
+		releaseable.setBorrowStackTrace(st)
+		m.Lock()
+		objAmounts[st]++
+		m.Unlock()
+	}
+	releaseable.init()
 	return obj.(T)
 }
 
@@ -84,12 +92,15 @@ func (r *implIReleaser[T]) Release() {
 	if r.isOwned {
 		panic("must be released by owner")
 	}
-	r.releaseOwned()
+	for cur := IReleaser(r); cur != nil; cur = cur.releaseSelf() {
+	}
 }
 
 func (r *implIReleaser[T]) reset() {
 	r.isReleased = false
 	r.isOwned = false
+	r.next = nil
+	r.borrowStackTrace = ""
 }
 
 func (r *implIReleaser[T]) IsOwned() bool {
@@ -104,46 +115,44 @@ func (r *implIReleaser[T]) setBorrowStackTrace(stackTrace string) {
 	r.borrowStackTrace = stackTrace
 }
 
-func (r *implIReleaser[T]) releaseOwned() {
+func (r *implIReleaser[T]) isAlreadyReleased() bool {
+	return r.isReleased
+}
+
+func (r *implIReleaser[T]) releaseSelf() IReleaser {
 	if r.isReleased {
 		panic("already released")
 	}
 	if r.cleanupIntf != nil {
 		r.cleanupIntf.Cleanup()
 	}
-	if r.ownedTail != nil {
-		r.ownedTail.(IReleaser).releaseOwned()
-		r.ownedTail = nil
-	}
+	next := r.next
+	r.next = nil
 	r.isReleased = true
 	atomic.AddUint64(&r.ownerPool.objectsInUse, ^uint64(0))
 	if isDebug {
 		m.Lock()
-		amount := objAmounts[r.borrowStackTrace]
-		objAmounts[r.borrowStackTrace] = amount - 1
+		objAmounts[r.borrowStackTrace]--
 		m.Unlock()
 	}
 	if !r.ownerPool.isStub {
 		r.ownerPool.Put(r.obj)
 	}
+	return next
 }
 
-func (r *implIReleaser[T]) init(obj interface{}) {
-	if !r.isInitIntfDetermined {
-		r.initIntf, _ = obj.(interface{ Init() })
-		r.isInitIntfDetermined = true
-	}
+func (r *implIReleaser[T]) init() {
 	if r.initIntf != nil {
 		r.initIntf.Init()
 	}
 }
 
-func (r *implIReleaser[T]) setOwnedTail(tail interface{}) {
-	r.ownedTail = tail
+func (r *implIReleaser[T]) setNext(next IReleaser) {
+	r.next = next
 }
 
-func (r *implIReleaser[T]) getOwnedTail() interface{} {
-	return r.ownedTail
+func (r *implIReleaser[T]) getNext() IReleaser {
+	return r.next
 }
 
 // NewPoolStub creates pool which does not act as a pool. I.e. just creates a new instance on each Get()
@@ -166,6 +175,7 @@ func NewPool[T any](instantiator func(releaser IReleaser) any) IPool[T] {
 			}
 			newInstance := instantiator(releaser)
 			releaser.cleanupIntf, _ = newInstance.(interface{ Cleanup() })
+			releaser.initIntf, _ = newInstance.(interface{ Init() })
 			releaser.obj = newInstance.(T)
 			return newInstance
 		},
