@@ -1,11 +1,11 @@
 module github.com/host6/pool
 
-go 1.21
+go 1.26.2
 
 require (
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.11.1
 	github.com/valyala/bytebufferpool v1.0.0
-	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225
+	golang.org/x/exp v0.0.0-20260508232706-74f9aab9d74a
 )
 
 require (
