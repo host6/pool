@@ -15,6 +15,7 @@ import (
 	"sync/atomic"
 )
 
+
 var (
 	m               sync.Mutex = sync.Mutex{}
 	objectsCounters []func() uint64
